@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AtelierTSA Pager OS</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+    <style>
+        :root {
+            --lcd-bg: #9ebf3b;
+            --lcd-text: #2d3316;
+            --log-bg: #111b2d;
+            --log-text: #7889b3;
+            --body-bg: #2d333b;
+            --btn-call: #2563eb;
+        }
+        body {
+            background-color: var(--body-bg);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px 10px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            width: 340px;
+            background: #3d444d;
+            border-radius: 25px;
+            padding: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 液晶エリア（ここを押すと入力開始） */
+        .lcd-panel {
+            background-color: var(--lcd-bg);
+            color: var(--lcd-text);
+            height: 120px;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            border: 5px solid #222;
+            cursor: pointer; /* 押せることを示す */
+        }
+        .lcd-header { font-size: 11px; font-weight: 900; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(45,51,22,0.2); padding-bottom: 4px; }
+        .lcd-main {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* ログエリア */
+        .log-panel {
+            background-color: var(--log-bg);
+            color: var(--log-text);
+            height: 180px;
+            border-radius: 12px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            overflow-y: auto;
+            border: 4px solid #222;
+        }
+        .log-row { border-bottom: 1px solid rgba(120,137,179,0.2); padding: 6px 0; }
+        .log-meta { font-size: 9px; opacity: 0.7; display: flex; justify-content: space-between; }
+
+        /* 入力段（iPhone純正キーボードを呼び出すための透明な仕組み） */
+        .input-row {
+            display: flex;
+            gap: 10px;
+            height: 60px;
+        }
+        .input-wrapper {
+            flex-grow: 1;
+            background: #1a1a1a;
+            border: 2px solid #555;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        #msgInput {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #0f0;
+            padding: 0 15px;
+            font-size: 18px;
+            outline: none;
+        }
+        .btn-call {
+            background-color: var(--btn-call);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            width: 90px;
+            font-weight: 900;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1e40af;
+        }
+        .btn-call:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e40af; }
+
+        #qrcode { background: white; padding: 5px; border-radius: 5px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="lcd-panel" onclick="document.getElementById('msgInput').focus()">
+            <div class="lcd-header">
+                <span>PAGER OS V1.0</span>
+                <span id="timer">--:--</span>
+            </div>
+            <div class="lcd-main" id="display">ここを押すと下に文字を打つ</div>
+        </div>
+
+        <div class="log-panel" id="log-history">
+            </div>
+
+        <div class="input-row">
+            <div class="input-wrapper">
+                <input type="text" id="msgInput" placeholder="文字を入力..." autocomplete="off">
+            </div>
+            <button class="btn-call" onclick="send()">CALL</button>
+        </div>
+    </div>
+
+    <div id="qrcode"></div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycby82sEv8kBFUTJC-BuewNGSKYyWYi-9T_j7MTFYhvEZsizRfNUbfA8r4nJO82G1Z3E2/exec';
+        const MY_ID = 'Hide';
+        const TO_ID = 'Manabu';
+
+        // QR生成
+        QRCode.toCanvas(document.getElementById('qrcode'), `https://gh-hide-bot.github.io/Pokeberu-Modoki/pokeberu.html?add=${MY_ID}`);
+
+        const display = document.getElementById('display');
+        const input = document.getElementById('msgInput');
+        const logHistory = document.getElementById('log-history');
+
+        // 入力を液晶にリアルタイム同期（iPhoneの打ち方が反映される）
+        input.addEventListener('input', (e) => {
+            display.innerText = e.target.value || "ここを押すと下に文字を打つ";
+        });
+
+        // 送信
+        async function send() {
+            const msg = input.value;
+            if(!msg) return;
+            document.querySelector('.lcd-header span').innerText = "CALLING...";
+            try {
+                await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ action: 'sendMessage', from: MY_ID, to: TO_ID, message: msg }) 
+                });
+                input.value = '';
+                display.innerText = "COMPLETE";
+                setTimeout(() => { 
+                    display.innerText = "READY..."; 
+                    document.querySelector('.lcd-header span').innerText = "PAGER OS V1.0";
+                }, 2000);
+                loadMessages();
+            } catch(e) { display.innerText = "ERROR"; }
+        }
+
+        // 履歴
+        async function loadMessages() {
+            try {
+                const res = await fetch(`${GAS_URL}?action=getMessages&user=${MY_ID}&with=${TO_ID}`);
+                const data = await res.json();
+                if(data.length > 0) {
+                    logHistory.innerHTML = data.reverse().map(m => `
+                        <div class="log-row">
+                            <div class="log-meta">
+                                <span>FROM: ${m[1]}</span>
+                                <span>${new Date(m[0]).toLocaleTimeString()}</span>
+                            </div>
+                            <div style="font-size:14px; color:white; margin-top:2px;">${m[3]}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {}
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('timer').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        }, 1000);
+
+        setInterval(loadMessages, 5000);
+        loadMessages();
+    </script>
+</body>
+</html>
