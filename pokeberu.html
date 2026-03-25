@@ -2,215 +2,280 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AtelierTSA Pager OS - Legacy UI V1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AtelierTSA Pager OS</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
     <style>
         :root {
-            --lcd-bg: #9ebf3b;
-            --lcd-text: #2d3316;
-            --body-bg: #1a1a1a;
-            --pager-case: #333;
+            --housing-bg: #1a1a1a;
+            --housing-edge: #0a0a0a;
+            --screen-bg: #151921;
+            --screen-text: #d1d5db;
+            --screen-dim: #4b5563;
+            --btn-call: #3375ff;
+            --btn-shadow: #1e40af;
+            --lcd-font: 'JetBrains Mono', 'Courier New', Courier, monospace;
         }
         body {
-            background-color: var(--body-bg);
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
             margin: 0;
+            padding: 20px 10px;
+            height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        
-        /* 以前のポケベル筐体（IMG_4797.PNGを参考にした無骨なデザイン） */
-        .pager-frame {
-            background: var(--pager-case);
-            border-radius: 20px;
-            padding: 30px;
-            border: 4px solid #444;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: 320px;
+        .container {
+            width: min(380px, 95vw);
+            background: linear-gradient(135deg, var(--housing-bg), var(--housing-edge));
+            border-radius: 40px;
+            padding: 30px 20px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.9), inset 0 2px 3px rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        /* 統合されたスクリーンエリア */
+        .device-screen {
+            background-color: var(--screen-bg);
+            border-radius: 12px;
+            border: 6px solid #000;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            height: 380px;
+            overflow: hidden;
             position: relative;
         }
         
-        /* 以前の液晶ディスプレイUIの完全復元（2026-03-17 11.56.37.jpg準拠） */
-        .lcd-screen {
-            background-color: var(--lcd-bg);
-            color: var(--lcd-text);
-            height: 180px;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-            border: 10px solid #222;
-        }
-        
-        /* 液晶内の以前のレイアウト */
-        .status-bar { 
-            font-size: 12px; 
-            font-weight: bold; 
-            border-bottom: 1px solid var(--lcd-text); 
-            padding-bottom: 5px;
+        /* 擬似ステータスバー */
+        .status-bar {
+            height: 20px;
+            padding: 0 8px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--screen-text);
+            opacity: 0.8;
+            font-weight: 600;
         }
-        
-        /* 以前の入力エリア（液晶に直接浮かび上がる入力欄） */
-        .input-display {
-            font-size: 32px;
-            text-align: center;
-            flex-grow: 1;
+        .status-left { display: flex; gap: 4px; }
+        .status-right { display: flex; gap: 4px; align-items: center; }
+
+        /* 液晶表示（ここを入力が反映される場所にする） */
+        .lcd-display {
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: rgba(0,0,0,0.2);
+            height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        #display {
+            font-family: var(--lcd-font);
+            font-size: 20px;
+            color: #fff;
+            text-align: center;
+            font-weight: 700;
             word-break: break-all;
-            background: rgba(0,0,0,0.05); /* 液晶内の入力欄を目立たせる */
-            border-radius: 3px;
-            margin: 10px 0;
-            padding: 5px;
         }
 
-        /* ダサい入力欄を消し、液晶内の文字として機能させるためのCSS */
+        /* ログエリア */
+        .log-panel {
+            flex-grow: 1;
+            padding: 10px 15px;
+            overflow-y: auto;
+            font-family: var(--lcd-font);
+            font-size: 11px;
+            color: var(--screen-text);
+        }
+        .log-row { 
+            padding: 8px 0; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+        .log-meta { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 9px; 
+            color: var(--screen-dim);
+            margin-bottom: 2px;
+        }
+        .log-content { color: #fff; }
+
+        /* 入力エリア */
+        .input-section {
+            display: flex;
+            gap: 12px;
+            height: 60px;
+        }
+        .input-container {
+            flex-grow: 1;
+            background: #000;
+            border-radius: 15px;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
         #msgInput {
-            border: none;
-            background: transparent;
-            color: var(--lcd-text);
-            font-family: inherit;
-            font-size: 32px;
             width: 100%;
-            text-align: center;
-            outline: none; /* フォーカス時の枠線を消す */
+            background: transparent;
+            border: none;
+            color: var(--btn-call);
+            font-size: 16px;
+            outline: none;
+            font-family: var(--lcd-font);
         }
-        #msgInput::placeholder {
-            color: rgba(45, 51, 22, 0.3);
+        .btn-call {
+            background-color: var(--btn-call);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            width: 80px;
+            font-weight: 900;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 var(--btn-shadow);
+            transition: transform 0.1s, box-shadow 0.1s;
         }
+        .btn-call:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--btn-shadow); }
+        .btn-call:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #qrcode { background: white; padding: 10px; border-radius: 12px; margin-top: 20px; }
         
-        /* 液晶内の履歴表示（受信メッセージ） */
-        .history-area {
-            font-size: 14px;
-            height: 50px;
-            overflow-y: scroll;
-            border-top: 1px solid var(--lcd-text);
-            padding-top: 5px;
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            vertical-align: middle;
         }
-        
-        /* 入力インターフェース（ボタン群） */
-        .controls { margin-top: 20px; width: 320px; display: flex; flex-direction: column; gap: 10px; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            padding: 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px;
-            background: #444; color: white; transition: 0.2s;
-            font-family: inherit;
-        }
-        button:active { transform: scale(0.95); }
-        .btn-send { background: #0066cc; }
-        .btn-mic { background: #cc3300; }
-        
-        /* QR・設定セクション */
-        .side-panel { margin-top: 30px; text-align: center; background: #222; padding: 20px; border-radius: 10px; border: 1px solid #444; width: 320px;}
-        #qrcode { background: white; padding: 10px; display: inline-block; margin-top: 10px; border-radius: 5px;}
+        .status-online { background-color: #238636; box-shadow: 0 0 5px #238636; }
     </style>
 </head>
 <body>
 
-    <div class="pager-frame">
-        <div class="lcd-screen">
+    <div class="container">
+        <div class="device-screen" onclick="document.getElementById('msgInput').focus()">
             <div class="status-bar">
-                <span id="status">PAGER MODE</span>
-                <span id="timer">00:00</span>
+                <div class="status-left">
+                    <span>11:15</span>
+                    <span>圏外</span>
+                </div>
+                <div class="status-right">
+                    <span>VPN</span>
+                    <span>100% 🔋</span>
+                </div>
             </div>
             
-            <div class="input-display">
-                <input type="text" id="msgInput" placeholder="数字を入力...">
+            <div class="lcd-display">
+                <div id="display">数字でも文字でも</div>
             </div>
-            
-            <div class="history-area" id="history">
-                READY / AtelierTSA
+
+            <div class="log-panel" id="log-history">
+                <!-- Messages will be loaded here -->
             </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-container">
+                <input type="text" id="msgInput" placeholder="数字でも文字でも" autocomplete="off" inputmode="text">
+            </div>
+            <button class="btn-call" onclick="send()">CALL</button>
         </div>
     </div>
 
-    <div class="controls">
-        <div class="btn-group">
-            <button class="btn-send" onclick="send()">送信</button>
-            <button class="btn-mic" id="micBtn">マイク</button>
-        </div>
-    </div>
-
-    <div class="side-panel">
-        <div>MY CONTACT QR</div>
-        <div id="qrcode"></div>
-        <p style="font-size: 12px; color: #888;">Manabuにスキャンさせて交換だっちゃ！</p>
-    </div>
+    <div id="qrcode"></div>
 
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycby82sEv8kBFUTJC-BuewNGSKYyWYi-9T_j7MTFYhvEZsizRfNUbfA8r4nJO82G1Z3E2/exec';
-        const MY_ID = 'Hide';
-        const TO_ID = 'Manabu';
+        
+        const params = new URLSearchParams(window.location.search);
+        const targetId = params.get('add') || 'Manabu';
+        const MY_ID = (targetId === 'Manabu') ? 'Hide' : 'Manabu';
+        const TO_ID = targetId;
 
-        // QR生成
-        QRCode.toCanvas(document.getElementById('qrcode'), `https://gh-hide-bot.github.io/Pokeberu-Modoki/pokeberu.html?add=${MY_ID}`);
+        // QR生成 (Points to index.html for GitHub Pages compatibility)
+        QRCode.toCanvas(document.getElementById('qrcode'), `https://gh-hide-bot.github.io/Pokeberu-Modoki/index.html?add=${MY_ID}`);
 
-        // メッセージ送信
+        const display = document.getElementById('display');
+        const input = document.getElementById('msgInput');
+        const logHistory = document.getElementById('log-history');
+
+        input.addEventListener('input', (e) => {
+            display.innerText = e.target.value || "数字でも文字でも";
+        });
+
+        input.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') send();
+        });
+
         async function send() {
-            const msg = document.getElementById('msgInput').value;
+            const msg = input.value.trim();
             if(!msg) return;
-            document.getElementById('msgInput').value = "SENDING...";
+            
+            const btn = document.querySelector('.btn-call');
+            btn.disabled = true;
+            display.innerText = "SENDING...";
             
             try {
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'sendMessage', from: MY_ID, to: TO_ID, message: msg })
+                await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ action: 'sendMessage', from: MY_ID, to: TO_ID, message: msg }) 
                 });
-                document.getElementById('msgInput').value = ''; // 送信後にクリア
+                
+                input.value = '';
+                display.innerText = "SENT!";
+                setTimeout(() => { 
+                    display.innerText = "数字でも文字でも"; 
+                    btn.disabled = false;
+                }, 1500);
                 setTimeout(loadMessages, 1000);
-            } catch(e) {
-                document.getElementById('msgInput').value = "ERROR";
+            } catch(e) { 
+                display.innerText = "ERROR"; 
+                btn.disabled = false;
             }
         }
 
-        // メッセージ受信（履歴エリアを更新）
         async function loadMessages() {
             try {
                 const res = await fetch(`${GAS_URL}?action=getMessages&user=${MY_ID}&with=${TO_ID}`);
                 const data = await res.json();
-                const historyArea = document.getElementById('history');
+                
                 if(data.length > 0) {
-                    historyArea.innerHTML = data.map(m => `<div>[${m[1]}] ${m[3]}</div>`).join('');
-                    historyArea.scrollTop = historyArea.scrollHeight; // 最下部へスクロール
+                    logHistory.innerHTML = data.reverse().map((m, i) => `
+                        <div class="log-row">
+                            <div class="log-meta">
+                                <span>[${String(i+1).padStart(3, '0')}] ${m[1] === MY_ID ? 'SENT' : m[1]}</span>
+                                <span>${new Date(m[0]).toLocaleString('ja-JP', {hour12:false})}</span>
+                            </div>
+                            <div class="log-content">${m[3]}</div>
+                        </div>
+                    `).join('');
                 }
-            } catch(e) { console.log("Polling..."); }
+            } catch(e) {}
         }
 
-        // マイク入力（Mic_Prototypeの機能を統合、入力欄へ流し込む）
-        const micBtn = document.getElementById('micBtn');
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP';
-            micBtn.onclick = () => {
-                recognition.start();
-                document.getElementById('status').innerText = "LISTENING...";
-            };
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                const numbers = transcript.replace(/[^0-9]/g, '');
-                if(numbers) document.getElementById('msgInput').value = numbers;
-                document.getElementById('status').innerText = "READY";
-            };
-        }
-
-        // 自動更新（履歴とタイマー）
-        setInterval(loadMessages, 10000); // 10秒ごとにGASを確認
         setInterval(() => {
             const now = new Date();
-            document.getElementById('timer').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            document.querySelector('.status-left span:first-child').innerText = timeStr;
         }, 1000);
 
-        loadMessages(); // 初回読み込み
+        setInterval(loadMessages, 5000);
+        loadMessages();
     </script>
 </body>
 </html>
