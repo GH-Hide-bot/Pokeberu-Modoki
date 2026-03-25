@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AtelierTSA: Mic_Poke_V2</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+
+        #display {
+            border: 2px solid #0f0;
+            padding: 20px;
+            height: 200px;
+            font-size: 2em;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        #status {
+            color: #f00;
+            font-weight: bold;
+        }
+
+        .log {
+            font-size: 0.8em;
+            color: #080;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>AtelierTSA: Mic_Poke_Prototype V2</h2>
+    <div id="status">OFFLINE</div>
+    <div id="display">READY...</div>
+    <div id="log-container" class="log"></div>
+
+    <script>
+        const display = document.getElementById('display');
+        const status = document.getElementById('status');
+        const logContainer = document.getElementById('log-container');
+
+        // ポケベル辞書（拡張可能）
+        const pokeDict = {
+            "22410485": "ギテヨ（再起動）",
+            "46244": "スキダヨ",
+            "06": "ウエ",
+            "084": "オハヨウ",
+            "3341": "サミシイ",
+            "4510": "シゴト"
+        };
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            display.innerText = "Error: Web Speech API not supported.";
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = true;
+            recognition.interimResults = false; // 精度優先のため、確定結果のみ採用
+
+            recognition.onstart = () => { status.innerText = "ONLINE / LISTENING..."; status.style.color = "#0f0"; };
+            recognition.onend = () => { recognition.start(); }; // 自動再起動で並走維持
+
+            recognition.onresult = (event) => {
+                const result = event.results[event.results.length - 1][0];
+                const transcript = result.transcript;
+                const confidence = (result.confidence * 100).toFixed(1);
+
+                // 数字のみを抽出
+                const numbers = transcript.replace(/[^0-9]/g, '');
+
+                if (numbers) {
+                    const message = pokeDict[numbers] || "UNKNOWN CODE";
+                    display.innerText = `${numbers}\n(${message})`;
+
+                    // ログ出力（デバッグ用）
+                    const logEntry = document.createElement('div');
+                    logEntry.innerText = `[${new Date().toLocaleTimeString()}] Raw: "${transcript}" | Num: ${numbers} | Conf: ${confidence}%`;
+                    logContainer.prepend(logEntry);
+                }
+            };
+
+            recognition.start();
+        }
+    </script>
+</body>
+
+</html>
