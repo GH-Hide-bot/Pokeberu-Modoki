@@ -83,12 +83,9 @@ def update_map_and_status(mermaid_diagram, design_specs, project_status):
     print(f"✅ 物理層に着弾成功 (Map & Status): {MAP_STATUS_PATH}")
 
 if __name__ == "__main__":
-    # --- 安全第一：GCPコスト管理プロトコル ---
-    strategy_title = "GCP 1,000円予算アラート & 安全装置の確立"
-    strategy_detail = "不慮の課金防御。Vertex AI等で高負荷実験を行う前の必須要件。予算アラート設定と課金停止フローの確認。"
-    strategy_content = f"**[{strategy_title}]** {strategy_detail}"
-    
-    add_brainstorm(strategy_content, "インフラ / 安全", "SSS（安全最優先）", at_top=True)
+    # --- 情報同期：wqアスレログの確立 ---
+    sync_content = "『wqアスレ』ログの確立。過去のデバッグ記録（10枚のスクショ）を物理層に完全着弾。RAM/NLMの情報同期完了。"
+    add_brainstorm(sync_content, "Project Management", "S", at_top=True)
     
     # --- プロジェクト情報の自動生成・更新 ---
     mermaid = """
